@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Processor</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+  </head>
+  <body>
+    <form method="POST" action="/" enctype="multipart/form-data">
+      <h1>Latex Generator</h1>
+      <label for="input_type">Select the file type to process:</label>
+      <select
+        id="input_type"
+        name="input_type"
+        required
+        onchange="updateFileType()"
+      >
+        <option value="">-- Select File Type --</option>
+        <option value="pdf">PDF</option>
+        <option value="image">Image</option>
+      </select>
+      <br /><br />
+
+      <label for="file">Upload the file:</label>
+      <input type="file" id="file" name="file" required /><br /><br />
+
+      <label for="api_key">Enter your OpenAI API key:</label>
+      <input type="text" id="api_key" name="api_key" required /><br /><br />
+
+      <label for="output_file_base"
+        >Enter the base name for the output LaTeX files (e.g.,
+        latex_output):</label
+      >
+      <input
+        type="text"
+        id="output_file_base"
+        name="output_file_base"
+        required
+      /><br /><br />
+
+      <button type="submit">Submit</button>
+    </form>
+    {% with messages = get_flashed_messages() %} {% if messages %}
+    <ul>
+      {% for message in messages %}
+      <li class="flash">{{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %} {% endwith %}
+  </body>
+
+  <script>
+    function updateFileType() {
+      var inputType = document.getElementById("input_type").value;
+      var fileInput = document.getElementById("file");
+
+      if (inputType === "pdf") {
+        fileInput.accept = ".pdf";
+      } else if (inputType === "image") {
+        fileInput.accept = ".png, .jpg, .jpeg";
+      } else {
+        fileInput.accept = ""; // Reset if no valid option is selected
+      }
+    }
+  </script>
+</html>

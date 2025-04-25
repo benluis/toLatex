@@ -16,8 +16,6 @@ app: FastAPI = FastAPI(lifespan=clients.lifespan)
 
 
 templates_dir: Path = Path("templates")
-static_dir: Path = Path("static")
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates: Jinja2Templates = Jinja2Templates(directory=templates_dir)
 
 

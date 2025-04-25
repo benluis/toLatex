@@ -20,7 +20,7 @@ A web application that converts images and PDFs containing equations, formulas, 
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/benluis/toLatex.git
 cd latex-generator
 ```
 
@@ -69,10 +69,6 @@ python main.py
 - `clients.py`: OpenAI client initialization
 - `models.py`: Pydantic data models
 - `templates/`: HTML templates for the web interface
-
-## License
-
-[MIT License](LICENSE)
 
 ## Acknowledgements
 

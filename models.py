@@ -23,3 +23,7 @@ class ConversionResult(BaseModel):
 class ErrorResponse(BaseModel):
     detail: str
     status: str = "error"
+
+
+class LatexRequest(BaseModel):
+    latex: str

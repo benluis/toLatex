@@ -9,7 +9,6 @@ import asyncio
 # external
 import cv2
 import fitz
-import numpy as np
 from fastapi import UploadFile, HTTPException
 
 # internal
@@ -25,11 +24,9 @@ async def handle_conversion(
     save_path = None
 
     try:
-        # Create a temp folder for all files in this conversion
         temp_folder = await create_temp_folder()
         file_extension: str = os.path.splitext(file.filename)[1].lower()
 
-        # Auto-detect file type
         if file_extension == '.pdf':
             input_type = "pdf"
         elif file_extension in ['.png', '.jpg', '.jpeg']:
@@ -40,7 +37,6 @@ async def handle_conversion(
                 detail="Invalid file format. Please upload a PDF or image file (PNG, JPG, or JPEG)."
             )
 
-        # Save uploaded file to temp folder
         save_path = os.path.join(temp_folder, file.filename)
         with open(save_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
@@ -58,7 +54,6 @@ async def handle_conversion(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        # Clean up temp folder and all its contents
         if temp_folder and os.path.exists(temp_folder):
             shutil.rmtree(temp_folder, ignore_errors=True)
 
@@ -92,12 +87,10 @@ async def preprocess_image_for_ocr(input_image_path: str, output_dir: str) -> st
 
         loop = asyncio.get_running_loop()
 
-        # Read the original image
         image = await loop.run_in_executor(None, cv2.imread, input_image_path)
         if image is None:
             raise ValueError(f"Could not read the image file '{input_image_path}'")
 
-        # Simple resize if image is very large
         height, width = image.shape[:2]
         max_dimension = 2000
         if max(height, width) > max_dimension:
@@ -107,11 +100,9 @@ async def preprocess_image_for_ocr(input_image_path: str, output_dir: str) -> st
                 lambda: cv2.resize(image, (int(width * scale), int(height * scale)))
             )
 
-        # Set output path in the temp directory
         base_name = os.path.basename(input_image_path)
         output_image_path = os.path.join(output_dir, f"processed_{base_name}")
 
-        # Save the processed image with minimal compression
         await loop.run_in_executor(
             None,
             lambda: cv2.imwrite(output_image_path, image, [cv2.IMWRITE_PNG_COMPRESSION, 1])
@@ -140,13 +131,10 @@ async def pdf_to_images(pdf_path: str, temp_folder: str, resolution_scale: float
 
         loop = asyncio.get_running_loop()
 
-        # Open PDF document with PyMuPDF
         pdf_document = await loop.run_in_executor(None, fitz.open, pdf_path)
         image_paths: List[str] = []
 
-        # Process each page
         for page_number in range(len(pdf_document)):
-            # These operations should be run in executor as they're CPU-bound
             def process_page(page_num):
                 page = pdf_document.load_page(page_num)
                 zoom_matrix = fitz.Matrix(resolution_scale, resolution_scale)
@@ -170,7 +158,6 @@ async def encode_image(image_path: str) -> str:
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image file not found: {image_path}")
 
-        # Simple function for file reading
         def read_and_encode():
             with open(image_path, "rb") as image_file:
                 file_content = image_file.read()
@@ -178,7 +165,6 @@ async def encode_image(image_path: str) -> str:
                     raise ValueError(f"Image file is empty: {image_path}")
                 return base64.b64encode(file_content).decode('utf-8')
 
-        # Run it in the executor
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, read_and_encode)
     except Exception as e:
@@ -190,13 +176,11 @@ async def convert_to_latex(image_path: str) -> str:
     try:
         base64_image = await encode_image(image_path)
 
-        # Get file extension to determine content type
         _, ext = os.path.splitext(image_path)
-        content_type = "image/jpeg"  # Default
+        content_type = "image/jpeg"
         if ext.lower() in ['.png']:
             content_type = "image/png"
 
-        # Create proper data URI
         data_uri = f"data:{content_type};base64,{base64_image}"
 
         response = await clients.openai_client.chat.completions.create(
@@ -225,10 +209,8 @@ async def convert_to_latex(image_path: str) -> str:
             max_tokens=1500
         )
 
-        # Rest of the function stays the same
         content = response.choices[0].message.content
 
-        # Remove triple backticks and language tags from the response
         if content.startswith("```"):
             first_line_end = content.find("\n")
             if first_line_end != -1:

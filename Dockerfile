@@ -21,8 +21,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY . /app/
 
-# Vercel provides a PORT environment variable. Default to 8000 for local testing.
-ENV PORT 8000
-
 # Command to run the application
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port $PORT"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

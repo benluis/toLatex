@@ -21,5 +21,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY . /app/
 
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command to run the application, listening on the port Vercel expects for Docker
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -15,14 +15,12 @@ class InputType(str, Enum):
     IMAGE = "image"
 
 
-class ConversionResult(BaseModel):
+class ConversionResponse(BaseModel):
     latex_content: List[str]
-    status: str = "success"
 
 
 class ErrorResponse(BaseModel):
     detail: str
-    status: str = "error"
 
 
 class LatexRequest(BaseModel):

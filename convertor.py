@@ -13,12 +13,12 @@ from fastapi import UploadFile, HTTPException
 
 # internal
 import clients
-from models import ConversionResult
+from models import ConversionResponse
 
 
 async def handle_conversion(
         file: UploadFile
-) -> ConversionResult:
+) -> ConversionResponse:
     """Handle file conversion to LaTeX with automatic file type detection."""
     temp_folder = None
     save_path = None
@@ -49,7 +49,7 @@ async def handle_conversion(
             result: str = await process_image(save_path, temp_folder)
             latex_content.append(result)
 
-        return ConversionResult(latex_content=latex_content)
+        return ConversionResponse(latex_content=latex_content)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

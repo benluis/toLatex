@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+jinja2 = "*"
+vercel-blob = "*"
+pydantic = "*"
+python-multipart = "*"
+openai = "*"
+opencv-python-headless = "*"
+numpy = "*"
+httpx = "*"
+
+[requires]
+python_version = "3.12"

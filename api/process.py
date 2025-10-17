@@ -10,39 +10,45 @@ import asyncio
 import cv2
 import fitz
 from fastapi import UploadFile, HTTPException
+from pydantic import BaseModel
+from openai import AsyncOpenAI
+import httpx
 
-# internal
-import clients
-from models import ConversionResponse
+class ConversionResponse(BaseModel):
+    latex_content: List[str]
 
+class ProcessRequest(BaseModel):
+    url: str
 
-async def handle_conversion(
-        file: UploadFile
-) -> ConversionResponse:
-    """Handle file conversion to LaTeX with automatic file type detection."""
+openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+async def handle_conversion(file_url: str) -> ConversionResponse:
     temp_folder = None
     save_path = None
-
     try:
         temp_folder = await create_temp_folder()
-        file_extension: str = os.path.splitext(file.filename)[1].lower()
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(file_url)
+            response.raise_for_status()
+            
+            file_content = response.content
+            filename = os.path.basename(urlparse(file_url).path)
+            save_path = os.path.join(temp_folder, filename)
+            
+            with open(save_path, "wb") as f:
+                f.write(file_content)
+
+        file_extension: str = os.path.splitext(filename)[1].lower()
 
         if file_extension == '.pdf':
             input_type = "pdf"
         elif file_extension in ['.png', '.jpg', '.jpeg']:
             input_type = "image"
         else:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid file format. Please upload a PDF or image file (PNG, JPG, or JPEG)."
-            )
-
-        save_path = os.path.join(temp_folder, file.filename)
-        with open(save_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
+            raise ValueError("Invalid file format.")
 
         latex_content: List[str] = []
-
         if input_type == "pdf":
             latex_content = await process_pdf(save_path, temp_folder)
         else:
@@ -50,9 +56,6 @@ async def handle_conversion(
             latex_content.append(result)
 
         return ConversionResponse(latex_content=latex_content)
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     finally:
         if temp_folder and os.path.exists(temp_folder):
             shutil.rmtree(temp_folder, ignore_errors=True)
@@ -183,7 +186,7 @@ async def convert_to_latex(image_path: str) -> str:
 
         data_uri = f"data:{content_type};base64,{base64_image}"
 
-        response = await clients.openai_client.chat.completions.create(
+        response = await openai_client.chat.completions.create(
             model="gpt-4o-2024-08-06",
             messages=[
                 {

@@ -77,27 +77,50 @@
 
         // --- Start loading state ---
         submitButton.disabled = true;
-        submitButton.innerHTML = 'Generating...';
+        submitButton.innerHTML = 'Uploading...';
         loadingSpinner.classList.remove('hidden');
         resultsContainer.classList.add('hidden');
         errorDisplay.classList.add('hidden');
 
-        const formData = new FormData();
-        formData.append('file', file);
-
         try {
-            const response = await fetch('/api/v1/convert', {
+            // Step 1: Get a secure URL for uploading
+            const uploadResponse = await fetch('/api/v1/upload', {
                 method: 'POST',
-                body: formData,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: file.name }),
             });
 
-            const data = await response.json();
+            if (!uploadResponse.ok) {
+                throw new Error('Could not get an upload URL.');
+            }
+            const uploadData = await uploadResponse.json();
 
-            if (!response.ok) {
-                throw new Error(data.detail || 'An unknown error occurred.');
+            // Step 2: Upload the file directly to Vercel Blob
+            const blobResponse = await fetch(uploadData.url, {
+                method: 'PUT',
+                body: file,
+            });
+
+            if (!blobResponse.ok) {
+                throw new Error('File upload failed.');
+            }
+            
+            submitButton.innerHTML = 'Processing...';
+
+            // Step 3: Call the processing function
+            const processResponse = await fetch('/api/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: uploadData.url }),
+            });
+
+            const resultData = await processResponse.json();
+            
+            if (!processResponse.ok) {
+                throw new Error(resultData.detail || 'Processing failed.');
             }
 
-            displayResults(data.latex_content);
+            displayResults(resultData.latex_content);
 
         } catch (error) {
             showError(error.message);

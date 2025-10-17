@@ -1,38 +1,28 @@
-# built-in
-import tempfile
-import subprocess
-import os
-
 # external
 import uvicorn
 from pathlib import Path
-from fastapi import FastAPI, File, UploadFile, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from vercel_blob import put
+from pydantic import BaseModel
 
-# internal
-import clients
-from models import ConversionResponse
-from convertor import handle_conversion
-
-
-app: FastAPI = FastAPI(lifespan=clients.lifespan)
-
+app: FastAPI = FastAPI()
 
 templates_dir: Path = Path("templates")
 templates: Jinja2Templates = Jinja2Templates(directory=templates_dir)
 
+class UploadRequest(BaseModel):
+    filename: str
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request) -> HTMLResponse:
+@app.get("/")
+async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-
-@app.post("/api/v1/convert", response_model=ConversionResponse)
-async def process_form(
-    file: UploadFile = File(...)
-) -> ConversionResponse:
-    return await handle_conversion(file=file)
+@app.post("/api/v1/upload")
+async def upload_file(request: UploadRequest):
+    blob = put(request.filename, b'', add_random_suffix=True)
+    return {"url": blob['url']}
 
 
 if __name__ == "__main__":

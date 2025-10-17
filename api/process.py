@@ -54,11 +54,15 @@ class handler(BaseHTTPRequestHandler):
 async def handle_conversion(file_url: str) -> ConversionResponse:
     temp_folder = None
     try:
+        print("Starting handle_conversion...")
         temp_folder = await create_temp_folder()
+        print(f"Created temp folder: {temp_folder}")
         
         async with httpx.AsyncClient() as client:
+            print(f"Downloading file from: {file_url}")
             response = await client.get(file_url)
             response.raise_for_status()
+            print("File downloaded successfully.")
             
             file_content = response.content
             filename = os.path.basename(urlparse(file_url).path)
@@ -66,15 +70,19 @@ async def handle_conversion(file_url: str) -> ConversionResponse:
             
             with open(save_path, "wb") as f:
                 f.write(file_content)
+            print(f"File saved to: {save_path}")
 
         file_extension: str = os.path.splitext(filename)[1].lower()
 
         if file_extension not in ['.png', '.jpg', '.jpeg']:
             raise ValueError(f"Invalid file format: {file_extension}. Only images are supported.")
 
+        print("Processing image...")
         result = await process_image(save_path, temp_folder)
+        print("Image processed successfully.")
         latex_content = [result]
 
+        print("Conversion successful.")
         return ConversionResponse(latex_content=latex_content)
     finally:
         if temp_folder and os.path.exists(temp_folder):
@@ -105,6 +113,7 @@ async def is_image_blurry(image_path: str, threshold: float = 100.0) -> bool:
 async def preprocess_image_for_ocr(input_image_path: str, output_dir: str) -> str:
     """Minimal preprocessing for better OCR text readability."""
     try:
+        print("Starting image preprocessing...")
         if not os.path.exists(input_image_path):
             raise FileNotFoundError(f"The file '{input_image_path}' does not exist")
 
@@ -117,6 +126,7 @@ async def preprocess_image_for_ocr(input_image_path: str, output_dir: str) -> st
         height, width = image.shape[:2]
         max_dimension = 2000
         if max(height, width) > max_dimension:
+            print("Resizing image...")
             scale = max_dimension / max(height, width)
             image = await loop.run_in_executor(
                 None,
@@ -130,6 +140,7 @@ async def preprocess_image_for_ocr(input_image_path: str, output_dir: str) -> st
             None,
             lambda: cv2.imwrite(output_image_path, image, [cv2.IMWRITE_PNG_COMPRESSION, 1])
         )
+        print(f"Preprocessed image saved to: {output_image_path}")
 
         return output_image_path
     except Exception as e:
@@ -168,7 +179,9 @@ async def encode_image(image_path: str) -> str:
 async def convert_to_latex(image_path: str) -> str:
     """Convert a single image to LaTeX using OpenAI's API."""
     try:
+        print("Encoding image to base64...")
         base64_image = await encode_image(image_path)
+        print("Image encoded successfully.")
 
         _, ext = os.path.splitext(image_path)
         content_type = "image/jpeg"
@@ -177,6 +190,7 @@ async def convert_to_latex(image_path: str) -> str:
 
         data_uri = f"data:{content_type};base64,{base64_image}"
 
+        print("Calling OpenAI API...")
         response = await openai_client.chat.completions.create(
             model="gpt-4o-2024-08-06",
             messages=[
@@ -190,6 +204,7 @@ async def convert_to_latex(image_path: str) -> str:
             ],
             max_tokens=2000
         )
+        print("OpenAI API call successful.")
 
         content = response.choices[0].message.content
 

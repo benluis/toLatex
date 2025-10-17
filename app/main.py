@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from vercel_blob import put
 from pydantic import BaseModel
+import uuid
 
 app: FastAPI = FastAPI()
 
@@ -21,7 +22,8 @@ async def index(request: Request):
 
 @app.post("/api/v1/upload")
 async def upload_file(request: UploadRequest):
-    blob = put(request.filename, b'', add_random_suffix=True)
+    filename = f"{uuid.uuid4()}-{request.filename}"
+    blob = put(filename, b'')
     return {"url": blob['url']}
 
 

@@ -1,6 +1,6 @@
 {
   "functions": {
-    "app/main.py": {
+    "api/index.py": {
       "maxDuration": 15
     },
     "api/process.py": {
@@ -9,6 +9,6 @@
   },
   "routes": [
     { "src": "/api/process", "dest": "/api/process.py" },
-    { "src": "/(.*)", "dest": "/app/main.py" }
+    { "src": "/(.*)", "dest": "/api/index.py" }
   ]
 }

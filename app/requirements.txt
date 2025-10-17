@@ -1,6 +1,0 @@
-fastapi
-uvicorn[standard]
-jinja2
-vercel-blob
-pydantic
-python-multipart

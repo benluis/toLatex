@@ -1,5 +1,0 @@
-openai
-opencv-python-headless
-numpy
-pydantic
-httpx

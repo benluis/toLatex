@@ -2,13 +2,27 @@
   "builds": [
     {
       "src": "main.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": { "pythonVersion": "3.11" }
+    },
+    {
+      "src": "api/process.py",
+      "use": "@vercel/python",
+      "config": { "pythonVersion": "3.11" }
     }
   ],
   "routes": [
     {
+      "src": "/api/v1/upload",
+      "dest": "/main.py"
+    },
+    {
+      "src": "/api/process",
+      "dest": "/api/process.py"
+    },
+    {
       "src": "/(.*)",
-      "dest": "main.py"
+      "dest": "/main.py"
     }
   ]
 }

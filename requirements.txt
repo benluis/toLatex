@@ -4,7 +4,7 @@ uvicorn[standard]>=0.23.2
 jinja2>=3.1.2
 
 # Vercel Blob Storage
-vercel-blob>=0.19.0
+vercel-blob>=0.4.0
 
 # HTTP Client
 httpx>=0.24.1

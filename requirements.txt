@@ -1,7 +1,7 @@
 fastapi
-uvicorn[standard]
-jinja2
-vercel-blob
-pydantic
-pydantic-settings
+uvicorn
+python-multipart
+openai
+opencv-python-headless
+python-dotenv
 

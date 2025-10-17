@@ -1,13 +1,20 @@
+# built-in
+import os
+from contextlib import asynccontextmanager
+
 # external
 import httpx
 from openai import AsyncOpenAI
-from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
-# internal
-from models import Setting
+# load environment variables from .env file
+load_dotenv()
+
+openai_client: AsyncOpenAI = AsyncOpenAI(
+    api_key=os.getenv("OPENAI_API_KEY")
+)
 
 http_client = None
-openai_client = None
 
 
 @asynccontextmanager

@@ -13,6 +13,9 @@ from fastapi import UploadFile, HTTPException
 from pydantic import BaseModel
 from openai import AsyncOpenAI
 import httpx
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import urlparse
+import json
 
 class ConversionResponse(BaseModel):
     latex_content: List[str]
@@ -20,11 +23,37 @@ class ConversionResponse(BaseModel):
 class ProcessRequest(BaseModel):
     url: str
 
+# This needs to be initialized within the async context or globally
+# depending on how the handler is invoked. For Vercel's environment,
+# initializing it globally is fine.
 openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+class handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
+        
+        try:
+            body = json.loads(post_data.decode('utf-8'))
+            request_data = ProcessRequest(**body)
+            
+            # Vercel runs in an async context, so we can run our async function directly
+            result = asyncio.run(handle_conversion(request_data.url))
+
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(result.model_dump_json().encode('utf-8'))
+
+        except Exception as e:
+            self.send_response(500)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            error_response = {"detail": f"An error occurred: {str(e)}"}
+            self.wfile.write(json.dumps(error_response).encode('utf-8'))
 
 async def handle_conversion(file_url: str) -> ConversionResponse:
     temp_folder = None
-    save_path = None
     try:
         temp_folder = await create_temp_folder()
         
@@ -46,14 +75,14 @@ async def handle_conversion(file_url: str) -> ConversionResponse:
         elif file_extension in ['.png', '.jpg', '.jpeg']:
             input_type = "image"
         else:
-            raise ValueError("Invalid file format.")
+            raise ValueError(f"Invalid file format: {file_extension}")
 
-        latex_content: List[str] = []
+        latex_content: List[str]
         if input_type == "pdf":
             latex_content = await process_pdf(save_path, temp_folder)
         else:
-            result: str = await process_image(save_path, temp_folder)
-            latex_content.append(result)
+            result = await process_image(save_path, temp_folder)
+            latex_content = [result]
 
         return ConversionResponse(latex_content=latex_content)
     finally:

@@ -83,31 +83,24 @@
         errorDisplay.classList.add('hidden');
 
         try {
-            // Step 1: Get a secure URL for uploading
+            // Step 1: Upload the file to our backend
+            const formData = new FormData();
+            formData.append('file', file);
+
             const uploadResponse = await fetch('/api/v1/upload', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: file.name }),
+                body: formData,
             });
 
             if (!uploadResponse.ok) {
-                throw new Error('Could not get an upload URL.');
+                const errorData = await uploadResponse.json().catch(() => ({ detail: 'File upload failed.' }));
+                throw new Error(errorData.detail);
             }
             const uploadData = await uploadResponse.json();
-
-            // Step 2: Upload the file directly to Vercel Blob
-            const blobResponse = await fetch(uploadData.url, {
-                method: 'PUT',
-                body: file,
-            });
-
-            if (!blobResponse.ok) {
-                throw new Error('File upload failed.');
-            }
             
             submitButton.innerHTML = 'Processing...';
 
-            // Step 3: Call the processing function
+            // Step 2: Call the processing function
             const processResponse = await fetch('/api/process', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

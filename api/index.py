@@ -9,7 +9,7 @@ import uuid
 
 app: FastAPI = FastAPI()
 
-templates_dir: Path = Path(__file__).parent.joinpath("templates")
+templates_dir: Path = Path(__file__).parent.joinpath("_templates")
 templates: Jinja2Templates = Jinja2Templates(directory=templates_dir)
 
 @app.get("/")

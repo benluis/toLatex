@@ -1,7 +1,5 @@
 openai
 opencv-python-headless
 numpy
-PyMuPDF
 pydantic
-pydantic-settings
 httpx

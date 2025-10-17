@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 app: FastAPI = FastAPI()
 
-templates_dir: Path = Path("templates")
+templates_dir: Path = Path(__file__).parent.joinpath("templates")
 templates: Jinja2Templates = Jinja2Templates(directory=templates_dir)
 
 class UploadRequest(BaseModel):

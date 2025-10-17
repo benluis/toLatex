@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LaTeX Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0KOVEMeaPoAbJjU2bTAanA/EUoxQm8wxIJfEuUhtGwsRRqMUGJMzY" crossorigin="anonymous">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzBCnY1+a8aDuaNhgnKDkxiJVvoVhrMortA" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" integrity="sha384-+VBxd3r6XgURycqtZ117nYw44OOcIax56Z4dCRWbxyPt0Koah1uHoK0o4+/RRE05" crossorigin="anonymous"></script>
+    <style>
+        .katex-display {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 0.5rem 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Image to LaTeX</h1>
+        <form id="upload-form" class="space-y-4">
+            <div>
+                <label for="file" class="block text-sm font-medium text-gray-700 mb-1">
+                    Upload PDF or Image (PNG, JPG, JPEG):
+                </label>
+                <input
+                        type="file"
+                        id="file"
+                        name="file"
+                        accept=".png,.jpg,.jpeg"
+                        required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+            </div>
+            <button
+                    type="submit"
+                    id="submit-button"
+                    class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 flex items-center justify-center"
+            >
+                Generate LaTeX
+            </button>
+        </form>
+    </div>
+
+    <div id="loading-spinner" class="hidden text-center mt-8">
+        <div class="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="mt-2 text-gray-600">Processing your file, please wait...</p>
+    </div>
+
+    <div id="error-display" class="hidden max-w-4xl mx-auto mt-8 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
+
+    <div id="results-container" class="hidden max-w-4xl mx-auto mt-8 bg-white rounded-lg shadow-md">
+        <h2 class="text-xl font-bold p-6 pb-3 text-center text-gray-800 border-b">Generated LaTeX</h2>
+        <div id="results-content" class="p-6 space-y-4"></div>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('upload-form');
+    const submitButton = document.getElementById('submit-button');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const resultsContainer = document.getElementById('results-container');
+    const resultsContent = document.getElementById('results-content');
+    const errorDisplay = document.getElementById('error-display');
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const fileInput = document.getElementById('file');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            showError('Please select a file to upload.');
+            return;
+        }
+
+        // --- Start loading state ---
+        submitButton.disabled = true;
+        submitButton.innerHTML = 'Uploading...';
+        loadingSpinner.classList.remove('hidden');
+        resultsContainer.classList.add('hidden');
+        errorDisplay.classList.add('hidden');
+
+        try {
+            // Step 1: Get a secure URL for uploading
+            const uploadResponse = await fetch('/api/v1/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: file.name }),
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error('Could not get an upload URL.');
+            }
+            const uploadData = await uploadResponse.json();
+
+            // Step 2: Upload the file directly to Vercel Blob
+            const blobResponse = await fetch(uploadData.url, {
+                method: 'PUT',
+                body: file,
+            });
+
+            if (!blobResponse.ok) {
+                throw new Error('File upload failed.');
+            }
+            
+            submitButton.innerHTML = 'Processing...';
+
+            // Step 3: Call the processing function
+            const processResponse = await fetch('/api/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: uploadData.url }),
+            });
+
+            const resultData = await processResponse.json();
+            
+            if (!processResponse.ok) {
+                throw new Error(resultData.detail || 'Processing failed.');
+            }
+
+            displayResults(resultData.latex_content);
+
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            // --- End loading state ---
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Generate LaTeX';
+            loadingSpinner.classList.add('hidden');
+        }
+    });
+
+    function displayResults(latexItems) {
+        resultsContent.innerHTML = ''; // Clear previous results
+        latexItems.forEach((item, index) => {
+            const resultBlock = document.createElement('div');
+            resultBlock.className = 'p-4 border rounded-md';
+
+            // Sanitize and prepare content for KaTeX
+            let sanitizedItem = item.replace(/\\documentclass\{.*?\}/g, '')
+                                     .replace(/\\usepackage\{.*?\}/g, '')
+                                     .replace(/\\begin\{document\}/g, '')
+                                     .replace(/\\end\{document\}/g, '')
+                                     .trim();
+
+            // Wrap in $$ for KaTeX rendering
+            const contentToRender = `$$${sanitizedItem}$$`;
+
+            resultBlock.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-medium text-gray-800">Result ${index + 1}</h3>
+                    <button onclick="copyToClipboard(this)" class="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded">Copy</button>
+                </div>
+                <div class="latex-render-area">${contentToRender}</div>
+                <div class="hidden mt-2 p-2 bg-gray-50 rounded">
+                    <pre><code class="language-latex">${item}</code></pre>
+                </div>
+            `;
+            resultsContent.appendChild(resultBlock);
+        });
+
+        renderMathInElement(resultsContent, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError: false
+        });
+
+        resultsContainer.classList.remove('hidden');
+    }
+
+    function showError(message) {
+        errorDisplay.textContent = `Error: ${message}`;
+        errorDisplay.classList.remove('hidden');
+    }
+
+    function copyToClipboard(button) {
+        const resultBlock = button.closest('.p-4');
+        const latexCode = resultBlock.querySelector('pre code').textContent;
+        navigator.clipboard.writeText(latexCode).then(() => {
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+                button.textContent = 'Copy';
+            }, 2000);
+        });
+    }
+
+</script>
+</body>
+</html>

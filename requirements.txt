@@ -1,7 +1,11 @@
 fastapi
 uvicorn
 python-multipart
-openai
 opencv-python-headless
 python-dotenv
+boto3
+Jinja2
+google-generativeai
+Pillow
+httpx
 

@@ -23,7 +23,7 @@
         <form id="upload-form" class="space-y-4">
             <div>
                 <label for="file" class="block text-sm font-medium text-gray-700 mb-1">
-                    Upload PDF or Image (PNG, JPG, JPEG):
+                    Upload Image (PNG, JPG, JPEG):
                 </label>
                 <input
                         type="file"
@@ -113,6 +113,9 @@
                 throw new Error(resultData.detail || 'Processing failed.');
             }
 
+            // Add this line for debugging
+            console.log("Raw API Response:", resultData.latex_content);
+
             displayResults(resultData.latex_content);
 
         } catch (error) {
@@ -154,15 +157,20 @@
             resultsContent.appendChild(resultBlock);
         });
 
-        renderMathInElement(resultsContent, {
-            delimiters: [
-                {left: '$$', right: '$$', display: true},
-                {left: '$', right: '$', display: false},
-                {left: '\\(', right: '\\)', display: false},
-                {left: '\\[', right: '\\]', display: true}
-            ],
-            throwOnError: false
-        });
+        try {
+            renderMathInElement(resultsContent, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                throwOnError: true // This is important
+            });
+        } catch (error) {
+            console.error("KaTeX rendering failed:", error);
+            showError("Failed to render the LaTeX response. It may contain invalid syntax. See the console for more details.");
+        }
 
         resultsContainer.classList.remove('hidden');
     }
